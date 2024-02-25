@@ -1,0 +1,20 @@
+Type: Jupyter Notebook Extension
+Name: NbPilot
+Description: A copilot which works collectively with you in a notebook.
+Link: README.md
+Main: main.js
+Compatibility: 3.x, 4.x, 5.x, 6.x
+Parameters:
+- name: nbpilot.assist_active
+  description: |
+    Enable continuous code auto-completion when notebook is first opened, or
+    if false, only when selected from extensions menu.
+  input_type: checkbox
+  default: false
+- name: nbpilot.assist_delay
+  description: |
+    delay in milliseconds between keypress & completion request.
+  input_type: number
+  min: 0
+  step: 1000
+  default: 1000
