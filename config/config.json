@@ -1,0 +1,20 @@
+{
+    "llm": {
+        "openai": {
+            "api_key": "",
+            "base_url": "",
+            "model_name": "gpt-3.5-turbo",
+            "api_version": null
+        },
+        "ollama": {
+            "base_url": "http://localhost:11434",
+            "model_name": "ollama_chat/mistral-openorca"
+        }
+    },
+    "tools": {
+        "search": {
+            "azure_search_api_key": "",
+            "tavily_search_api_key": ""
+        }
+    }
+}
