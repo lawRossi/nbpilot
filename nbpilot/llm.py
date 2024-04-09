@@ -3,14 +3,15 @@ from litellm import completion
 from .config import load_config
 
 
-def get_response(user_prompt, system_prompt=None, history=None, stream=False, provider="openai"):
+def get_response(user_prompt=None, system_prompt=None, history=None, stream=False, provider="ollama"):
     config = load_config()
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
+    if user_prompt:
+        messages.append({"role": "user", "content": user_prompt})
     if history:
-        messages.extend(history)
-    messages.append({"role": "user", "content": user_prompt})
+        messages = history + messages
     llm_config = config["llm"][provider]
     response = completion(
         base_url=llm_config["base_url"],
@@ -21,5 +22,5 @@ def get_response(user_prompt, system_prompt=None, history=None, stream=False, pr
         stream=stream
     )
     if not stream:
-        return response.choices[0].message.content
+        return response.choices[0].message["content"]
     return response

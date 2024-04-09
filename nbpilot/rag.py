@@ -6,7 +6,7 @@ from IPython.display import clear_output, display, Markdown
 from loguru import logger
 
 from .llm import get_response
-from .tools import get_references
+from .tools import get_search_results
 
 
 def format_references(references):
@@ -125,11 +125,7 @@ def format_result(result):
 
 def search_and_answer(history_questions, question, compress_context=False, model="gpt35", stream=False):
     logger.info("searching web ...")
-    references = get_references(question)
-    with open("references.txt", "w") as fo:
-        fo.write(json.dumps(references, ensure_ascii=False, indent=4))
-    with open("references.txt") as fi:
-        references = json.load(fi)
+    references = get_search_results(question)
     if len(references) == 0:
         logger.warning("no references fetched.")
         return

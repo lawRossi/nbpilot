@@ -68,9 +68,17 @@ def call_copilot_with_context(context, query, cell_id, history=None):
 
 
 def call_copilot_without_context(query, cell_id, history=None):
-    response = get_response(query, history=history)
-    response_html = markdown.markdown(response, extensions=['fenced_code'])
-    display(HTML(response_html), metadata={"copilot-output": True, "cellId": cell_id, "raw": response})
+    system_prompt = """
+    You are Nbpilot, a helpful AI assistant which help people in a jupyter notebook.
+    Organize your output in markdown format.
+    """
+    response = get_response(query, system_prompt, history=history, stream=True)
+    for chunk in response:
+        if not chunk.choices:
+            continue
+        chunk_content = chunk.choices[0].delta.content
+        if chunk_content is not None:
+            print(chunk_content, end="")
 
 
 def print_help_message():
