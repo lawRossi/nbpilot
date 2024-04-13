@@ -20,7 +20,7 @@ class NbpilotMagics(Magics):
 
     @line_cell_magic
     def search(self, line, cell=None):
-        search_and_answer([], line)
+        search_and_answer([], line, stream=True)
 
 
 def pre_run_cell(info):
