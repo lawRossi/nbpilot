@@ -1,4 +1,3 @@
-import json
 import re
 import time
 
@@ -123,7 +122,8 @@ def format_result(result):
     return md_content
 
 
-def search_and_answer(history_questions, question, compress_context=False, model="gpt35", stream=False):
+def search_and_answer(history_questions, question, compress_context=False,
+                      provider=None, model=None, stream=True):
     logger.info("searching web ...")
     references = get_search_results(question)
     if len(references) == 0:
@@ -145,13 +145,13 @@ def search_and_answer(history_questions, question, compress_context=False, model
     prompt = prompt.replace("{{referenes}}", refs_text)
     logger.info("extracting answer...")
     if not stream:
-        response = get_response(prompt)
+        response = get_response(prompt, provider=provider, model=model)
         result = parse_output(response)
         result["references"] = references
         md = format_result(result)
         display(Markdown(md))
     else:
-        response = get_response(prompt, stream=True)
+        response = get_response(prompt, provider=provider, model=model, stream=True)
         content = ""
         cache_content = ""
         start = time.time()

@@ -1,5 +1,7 @@
-from argparse import ArgumentParser
+import argparse
 import platform
+import re
+import time
 
 from ipylab import JupyterFrontEnd
 import ipynbname
@@ -29,19 +31,51 @@ The index of the current cell is {{cell_index}}.
 app = JupyterFrontEnd()
 
 
-def get_context(cell_id):
+def get_latest_notebook_content(cell_id):
+    app.commands.execute('docmanager:save')
+    time.sleep(1)
+
     notebook_path = ipynbname.path()
     with open(notebook_path, encoding="utf-8") as fi:
         notebook = nbformat.read(fi, as_version=4)
-
-    notebook_content = ""
+    cells = []
     current_cell_index = None
     for i, cell in enumerate(notebook.cells):
+        cells.append(format_cell_content(cell, i))
         if cell.id == cell_id:
             current_cell_index = i + 1
-        notebook_content += format_cell_content(cell, i) + "\n\n"
 
-    return {"content": notebook_content.strip(), "cell_index": current_cell_index}
+    return {"cells": cells, "current_cell_index": current_cell_index}
+
+
+def parse_range(context_range, pivot_index):
+    splits = [split.strip() for split in context_range.split(",")]
+    parsed_range = []
+    p = re.compile("([-]*\d+)\s*-\s*([+]*\d+)")
+    for split in splits:
+        m = p.match(split)
+        if m:
+            start = m.group(1)
+            end = m.group(2)
+            start = pivot_index + int(start) if start[0] == "-" else int(start)
+            end = pivot_index + int(end) if end[0] == "+" else int(end)
+            parsed_range.extend(range(start, end+1))
+        elif split[0] in "-+":
+            parsed_range.append(pivot_index+int(split))
+        else:
+            parsed_range.append(int(split))
+
+    return parsed_range
+
+
+def get_context(cell_id, context_range="all"):
+    content = get_latest_notebook_content(cell_id)
+    cells = content["cells"]
+    current_cell_index = content["current_cell_index"]
+    if context_range != "all":
+        cells = [cells[idx-1] for idx in parse_range(context_range, current_cell_index)]
+
+    return {"content": "\n\n".join(cells), "cell_index": current_cell_index}
 
 
 def format_cell_content(cell, cell_idx):
@@ -67,24 +101,17 @@ def call_copilot_with_context(context, query, cell_id, history=None):
     display(HTML(response_html), metadata={"copilot-output": True, "cellId": cell_id, "raw": response})
 
 
-def call_copilot_without_context(query, cell_id, history=None):
+def call_copilot_without_context(query, history=None, provider="ollama", model=None):
     system_prompt = """
     You are Nbpilot, a helpful AI assistant which help people in a jupyter notebook.
     Organize your output in markdown format.
     """
-    response = get_response(query, system_prompt, history=history, stream=True)
+    response = get_response(
+        query, system_prompt, history=history, stream=True, provider=provider, model=model
+    )
     for chunk in response:
         if not chunk.choices:
             continue
         chunk_content = chunk.choices[0].delta.content
         if chunk_content is not None:
             print(chunk_content, end="")
-
-
-def print_help_message():
-    arg_parser = ArgumentParser(prog="nbpilot", description="nbpilot commands", add_help=False)
-    arg_parser.add_argument("--with_context", action="store_true", help="use the content of the notebook as context")
-    arg_parser.add_argument("--history_turns", type=int, default=0, help="number of dialogue history to use")
-    arg_parser.add_argument("--exclude", action="store_true", help="exclude a cell from the context")
-
-    arg_parser.print_help()

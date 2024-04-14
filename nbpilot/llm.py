@@ -3,7 +3,13 @@ from litellm import completion
 from .config import load_config
 
 
-def get_response(user_prompt=None, system_prompt=None, history=None, stream=False, provider="ollama"):
+def get_response(
+        user_prompt=None,
+        system_prompt=None,
+        history=None,
+        stream=False,
+        provider="ollama",
+        model=None):
     config = load_config()
     messages = []
     if system_prompt:
@@ -17,7 +23,7 @@ def get_response(user_prompt=None, system_prompt=None, history=None, stream=Fals
         base_url=llm_config["base_url"],
         api_key=llm_config.get("api_key"),
         api_version=llm_config.get("api_version"),
-        model=llm_config["model_name"],
+        model=model if model is not None else llm_config["model_name"],
         messages=messages,
         stream=stream
     )
