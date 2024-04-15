@@ -20,13 +20,15 @@ class Inpteracter:
       - Write code that can run directlly in a jupyter notebook. Just code *without explaination*.
     """
 
-    def __init__(self):
+    def __init__(self, llm_provider="ollama", llm_model=None):
         self.output_context = widgets.Output(layout={'border': '1px solid black'})
         self.input_widget = widgets.Text(value="", description="User:", layout={"width": "80%", "height": "30px"})
         self.input_widget.on_submit(self._submit_and_show_response)
         self.flush_button = widgets.Button(description="Flush")
         self.flush_button.on_click(self.flush)
         self.msg_widgets = []
+        self.llm_provider = llm_provider
+        self.llm_model = llm_model
 
     def interact(self):
         with self.output_context:
@@ -65,7 +67,7 @@ class Inpteracter:
 
     def _request_and_show_response(self, msg):
         history = self._get_history()
-        res = get_response(user_prompt=msg, history=history, stream=True, provider="ollama")
+        res = get_response(user_prompt=msg, history=history, stream=True, provider=self.llm_provider, model=self.llm_model)
         response_widget = AdaptableTextArea(value="", description="Assistant:", layout={"width": "80%", "height": "30px"})
         self.msg_widgets.append(response_widget)
         with self.output_context:
@@ -132,8 +134,3 @@ class Inpteracter:
         self.msg_widgets = []
         with self.output_context:
             display(widgets.HBox([self.input_widget, self.flush_button]))
-
-
-def main():
-    interacter = Inpteracter()
-    return interacter.interact()
