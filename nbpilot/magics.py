@@ -5,7 +5,7 @@ from IPython.core.magic import Magics, line_cell_magic, magics_class
 import shlex
 
 from .interactive import Inpteracter
-from .nbpilot import call_copilot_without_context, call_copilot_with_context, get_context
+from .nbpilot import call_nbpilot
 from .rag import search_and_answer
 
 
@@ -18,6 +18,7 @@ def run(args_line, query=None):
         default="ollama", dest="provider", help="llm provider")
     parent_parser.add_argument('--llm_model', "-m", required=False,
         dest="model", help="model name")
+    parent_parser.add_argument("--history_turns", "-H", required=False, help="history turns to include", type=int, default=0)
     parent_parser.add_argument("--cells", "-c", required=False, help="cells to include in the context")
     parent_parser.add_argument("--query", "-q", required=False, help="query")
 
@@ -44,18 +45,15 @@ def run(args_line, query=None):
         if query is None:
             main_parser.print_help()
             return
-        if args.cells is None:
-            call_copilot_without_context(query, None, args.provider, args.model)
-        else:
-            context = get_context(RUNNING_CELL_ID, args.cells)
-            call_copilot_with_context(context, query, RUNNING_CELL_ID, None)
+        call_nbpilot(query, RUNNING_CELL_ID, provider=args.provider, model=args.model, history_turns=args.history_turns, context_cells=args.cells)
+
     elif args.sub_command == "search":
         if query is None:
             main_parser.print_help()
             return
         search_and_answer([], query, provider=args.provider, model=args.model)
     elif args.sub_command == "interact":
-        interacter = Inpteracter()
+        interacter = Inpteracter(args.provider, args.model)
         return interacter.interact()
 
 

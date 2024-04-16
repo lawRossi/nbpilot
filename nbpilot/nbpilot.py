@@ -1,32 +1,25 @@
-import argparse
 import platform
 import re
 import time
 
 from ipylab import JupyterFrontEnd
 import ipynbname
-from IPython.display import display, HTML
-import markdown
 import nbformat
 
 from .llm import get_response
 
 
 system_prompt = f"""
-You are a helpful AI assistant to help people use jupyter notebook with your language skill
-and coding skill. You are provided the content of the notebook and the query of the user.
-First, analyze the query step by step, and then generate your answer.
-You should first refer to the notebook content to find answer. You should write code to solve
-the problem when possible. Your code can use variables, functions, and classes defined in the
-notebook directly. The os of the jupyter runtime is {platform.platform()}.
+You are Nbpilot, a helpful AI assistant to help people with your rich knowledge and
+world-class programming skill. You must follow these rules:
+1. Refer to the latest notebook content to find answer if it is provided. 
+2. Try to derive a step-by-step answer or solution, and give a self-contained example.
+3. Organize your output in markdown format.
 
-Note: Your answer must use Chinese. Your code must be quoted as ```your code```.
-
-The content of the notebook: {{context}}
-
-The index of the current cell is {{cell_index}}.
+System information:
+OS: {platform.system()}
+Current time: {time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}
 """
-
 
 app = JupyterFrontEnd()
 
@@ -75,7 +68,8 @@ def get_context(cell_id, context_range="all"):
     if context_range != "all":
         cells = [cells[idx-1] for idx in parse_range(context_range, current_cell_index)]
 
-    return {"content": "\n\n".join(cells), "cell_index": current_cell_index}
+    context = "\n\n".join(cells)
+    return context
 
 
 def format_cell_content(cell, cell_idx):
@@ -92,26 +86,55 @@ def format_cell_content(cell, cell_idx):
     return cell_content
 
 
-def call_copilot_with_context(context, query, cell_id, history=None):
-    prompt = system_prompt.replace("{context}", context["content"])
-    prompt = prompt.replace("{query}", query)
-    prompt = prompt.replace("{cell_index}", str(context["cell_index"]))
-    response = get_response(query, prompt, history)
-    response_html = markdown.markdown(response, extensions=['fenced_code'])
-    display(HTML(response_html), metadata={"copilot-output": True, "cellId": cell_id, "raw": response})
+history = []
 
 
-def call_copilot_without_context(query, history=None, provider="ollama", model=None):
-    system_prompt = """
-    You are Nbpilot, a helpful AI assistant which help people in a jupyter notebook.
-    Organize your output in markdown format.
-    """
-    response = get_response(
-        query, system_prompt, history=history, stream=True, provider=provider, model=model
-    )
+def remove_redundant_system_msg(selected_history):
+    prev_system_msg_idx = None
+    for i in range(len(selected_history) - 1, -1, -1):
+        if selected_history[i]["role"] == "system":
+            if not prev_system_msg_idx:
+                prev_system_msg_idx = i
+            elif selected_history[prev_system_msg_idx]["content"] == selected_history[i]["content"]:
+                selected_history.pop(prev_system_msg_idx)
+            else:
+                prev_system_msg_idx = i
+
+
+def call_nbpilot(query, cell_id, provider="ollama", model=None, history_turns=0, context_cells=None):
+    selected_history = []
+    n = 0
+    if history_turns > 0:
+        for i in range(len(history) - 1, -1, -1):
+            if history[i]["role"] != "system" or context_cells is not None:
+                selected_history.insert(0, history[i])
+                if history[i]["role"] == "user":
+                    n += 1
+                    if n == history_turns:
+                        break
+
+    system_msg = None
+    if context_cells:
+        context = get_context(cell_id, context_cells)
+        if context:
+            context_content = "The content of selected cells provided:\n" + context
+            context_presented = False
+            system_msg = {"role": "system", "content": context_content}
+            selected_history.append(system_msg)
+
+    remove_redundant_system_msg(selected_history)
+    selected_history.insert(0, {"role": "system", "content": system_prompt})
+    response = get_response(query, history=selected_history, provider=provider, model=model, stream=True)
+    assistant_content = ""
     for chunk in response:
         if not chunk.choices:
             continue
         chunk_content = chunk.choices[0].delta.content
         if chunk_content is not None:
             print(chunk_content, end="")
+            assistant_content += chunk_content
+
+    history.append({"role": "user", "content": query})
+    if system_msg:
+        history.append(system_msg)
+    history.append({"role": "assistant", "content": assistant_content})

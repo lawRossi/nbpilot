@@ -39,3 +39,9 @@ def get_search_results(query, engine="ms", max_tokens=None):
             search_results = [json.loads(result) for result in json.loads(response)]
 
     return search_results
+
+
+def fetch_webpage_content(url, timeout=10):
+    url = "https://r.jina.ai/" + url
+    response = requests.get(url, timeout=timeout)
+    return response.text

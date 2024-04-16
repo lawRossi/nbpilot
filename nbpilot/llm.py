@@ -1,4 +1,7 @@
+import json
+
 from litellm import completion
+from loguru import logger
 
 from .config import load_config
 
@@ -9,7 +12,8 @@ def get_response(
         history=None,
         stream=False,
         provider="ollama",
-        model=None):
+        model=None,
+        debug=True):
     config = load_config()
     messages = []
     if system_prompt:
@@ -18,6 +22,10 @@ def get_response(
         messages.append({"role": "user", "content": user_prompt})
     if history:
         messages = history + messages
+
+    if debug:
+        logger.debug(json.dumps(messages, ensure_ascii=False))
+
     llm_config = config["llm"][provider]
     response = completion(
         base_url=llm_config["base_url"],
