@@ -101,7 +101,8 @@ def remove_redundant_system_msg(selected_history):
                 prev_system_msg_idx = i
 
 
-def call_nbpilot(query, cell_id, provider="ollama", model=None, history_turns=0, context_cells=None):
+def call_nbpilot(query, cell_id, provider="ollama", model=None, history_turns=0, 
+                 context_cells=None, debug=False):
     selected_history = []
     n = 0
     if history_turns > 0:
@@ -118,13 +119,12 @@ def call_nbpilot(query, cell_id, provider="ollama", model=None, history_turns=0,
         context = get_context(cell_id, context_cells)
         if context:
             context_content = "The content of selected cells provided:\n" + context
-            context_presented = False
             system_msg = {"role": "system", "content": context_content}
             selected_history.append(system_msg)
 
     remove_redundant_system_msg(selected_history)
     selected_history.insert(0, {"role": "system", "content": system_prompt})
-    response = get_response(query, history=selected_history, provider=provider, model=model, stream=True)
+    response = get_response(query, history=selected_history, provider=provider, model=model, stream=True, debug=debug)
     assistant_content = ""
     for chunk in response:
         if not chunk.choices:

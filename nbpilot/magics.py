@@ -15,9 +15,11 @@ RUNNING_CELL_ID = None
 def run(args_line, query=None):
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("--llm_provider", "-p",
-        default="ollama", dest="provider", help="llm provider")
+        default="zhipu", dest="provider", help="llm provider")
     parent_parser.add_argument('--llm_model', "-m", required=False,
         dest="model", help="model name")
+    parent_parser.add_argument('--debug', "-d", default=False, type=bool,
+        dest="debug", help="run with debug mode")
     parent_parser.add_argument("--history_turns", "-H", required=False, help="history turns to include", type=int, default=0)
     parent_parser.add_argument("--cells", "-c", required=False, help="cells to include in the context")
     parent_parser.add_argument("--query", "-q", required=False, help="query")
@@ -45,13 +47,14 @@ def run(args_line, query=None):
         if query is None:
             main_parser.print_help()
             return
-        call_nbpilot(query, RUNNING_CELL_ID, provider=args.provider, model=args.model, history_turns=args.history_turns, context_cells=args.cells)
+        call_nbpilot(query, RUNNING_CELL_ID, provider=args.provider, model=args.model,
+                     history_turns=args.history_turns, context_cells=args.cells, debug=args.debug)
 
     elif args.sub_command == "search":
         if query is None:
             main_parser.print_help()
             return
-        search_and_answer([], query, provider=args.provider, model=args.model)
+        search_and_answer([], query, provider=args.provider, model=args.model, debug=args.debug)
     elif args.sub_command == "interact":
         interacter = Inpteracter(args.provider, args.model)
         return interacter.interact()

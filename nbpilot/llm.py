@@ -11,9 +11,9 @@ def get_response(
         system_prompt=None,
         history=None,
         stream=False,
-        provider="ollama",
+        provider="zhipu",
         model=None,
-        debug=True):
+        debug=False):
     config = load_config()
     messages = []
     if system_prompt:

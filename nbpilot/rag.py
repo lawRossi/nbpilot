@@ -123,7 +123,7 @@ def format_result(result):
 
 
 def search_and_answer(history_questions, question, compress_context=False,
-                      provider=None, model=None, stream=True):
+                      provider=None, model=None, debug=False):
     logger.info("searching web ...")
     references = get_search_results(question)
     if len(references) == 0:
@@ -144,37 +144,30 @@ def search_and_answer(history_questions, question, compress_context=False,
     prompt = prompt.replace("{{question}}", question)
     prompt = prompt.replace("{{referenes}}", refs_text)
     logger.info("extracting answer...")
-    if not stream:
-        response = get_response(prompt, provider=provider, model=model)
-        result = parse_output(response)
-        result["references"] = references
-        md = format_result(result)
-        display(Markdown(md))
-    else:
-        response = get_response(prompt, provider=provider, model=model, stream=True)
-        content = ""
-        cache_content = ""
-        start = time.time()
-        for chunk in response:
-            if not chunk.choices:
-                continue
-            chunk_content = chunk.choices[0].delta.content
-            if chunk_content is not None:
-                cache_content += chunk_content
-                end = time.time()
-                if int((end - start) * 1000) > 40:
-                    content += cache_content
-                    result = parse_output(content)
-                    cache_content = ""
-                    if "answer" in result:
-                        md = format_result(result)
-                        clear_output()
-                        display(Markdown(md))
-                    start = time.time()
-        if cache_content:
-            content += cache_content
-            result = parse_output(content)
-        result["references"] = references
-        md = format_result(result)
-        clear_output()
-        display(Markdown(md))
+    response = get_response(prompt, provider=provider, model=model, stream=True, debug=debug)
+    content = ""
+    cache_content = ""
+    start = time.time()
+    for chunk in response:
+        if not chunk.choices:
+            continue
+        chunk_content = chunk.choices[0].delta.content
+        if chunk_content is not None:
+            cache_content += chunk_content
+            end = time.time()
+            if int((end - start) * 1000) > 200:
+                content += cache_content
+                result = parse_output(content)
+                cache_content = ""
+                if "answer" in result:
+                    md = format_result(result)
+                    clear_output()
+                    display(Markdown(md))
+                start = time.time()
+    if cache_content:
+        content += cache_content
+        result = parse_output(content)
+    result["references"] = references
+    md = format_result(result)
+    clear_output()
+    display(Markdown(md))
