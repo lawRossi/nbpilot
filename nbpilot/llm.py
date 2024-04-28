@@ -1,6 +1,8 @@
 import json
 
+import dashscope 
 from litellm import completion
+from litellm.utils import Delta, ModelResponse, StreamingChoices
 from loguru import logger
 
 from .config import load_config
@@ -11,7 +13,7 @@ def get_response(
         system_prompt=None,
         history=None,
         stream=False,
-        provider="zhipu",
+        provider="qwen",
         model=None,
         debug=False):
     config = load_config()
@@ -27,14 +29,36 @@ def get_response(
         logger.debug(json.dumps(messages, ensure_ascii=False))
 
     llm_config = config["llm"][provider]
-    response = completion(
-        base_url=llm_config["base_url"],
-        api_key=llm_config.get("api_key"),
-        api_version=llm_config.get("api_version"),
-        model=model if model is not None else llm_config["model_name"],
-        messages=messages,
-        stream=stream
-    )
+    if provider == "qwen":
+        response = dashscope.Generation.call(
+            api_key=llm_config["api_key"],
+            model=model or llm_config["model_name"],
+            messages=messages,
+            stream=stream,
+            result_format='message'
+        )
+        return wrap_response(response)
+    else:
+        response = completion(
+            base_url=llm_config["base_url"],
+            api_key=llm_config.get("api_key"),
+            api_version=llm_config.get("api_version"),
+            model=model or llm_config["model_name"],
+            messages=messages,
+            stream=stream
+        )
     if not stream:
         return response.choices[0].message["content"]
     return response
+
+
+def wrap_response(response):
+    content = ""
+    for i, chunk in enumerate(response):
+        msg = chunk.output.choices[0].message
+        delta = Delta(msg.content[len(content):], role=msg.role)
+        content = msg.content
+        choices = StreamingChoices(chunk.output.finish_reason, i, delta)
+        new_chunk = ModelResponse(stream=True)
+        new_chunk.choices = [choices]
+        yield new_chunk
