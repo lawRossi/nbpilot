@@ -37,7 +37,8 @@ def get_response(
             stream=stream,
             result_format='message'
         )
-        return wrap_response(response)
+        if stream:
+            response = wrap_response(response)
     else:
         response = completion(
             base_url=llm_config["base_url"],
