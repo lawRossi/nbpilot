@@ -2,7 +2,7 @@ import json
 
 import dashscope 
 from litellm import completion
-from litellm.utils import Delta, ModelResponse, StreamingChoices
+from litellm.utils import Choices, Delta, Message, ModelResponse, StreamingChoices
 from loguru import logger
 
 from .config import load_config
@@ -37,8 +37,7 @@ def get_response(
             stream=stream,
             result_format='message'
         )
-        if stream:
-            response = wrap_response(response)
+        response = wrap_response(response) if not stream else wrap_stream_response(response) 
     else:
         response = completion(
             base_url=llm_config["base_url"],
@@ -54,6 +53,16 @@ def get_response(
 
 
 def wrap_response(response):
+    choice = response.output.choices[0]
+    message = choice.message
+    msg = Message(message.content, message.role)
+    new_response = ModelResponse()
+    new_response.choices = [Choices(choice.finish_reason, message=msg)]
+
+    return new_response
+
+
+def wrap_stream_response(response):
     content = ""
     for i, chunk in enumerate(response):
         msg = chunk.output.choices[0].message
