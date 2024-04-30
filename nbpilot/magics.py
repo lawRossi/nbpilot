@@ -5,7 +5,7 @@ from IPython.core.magic import Magics, line_cell_magic, magics_class
 import shlex
 
 from .interactive import Inpteracter
-from .nbpilot import call_nbpilot
+from .nbpilot import call_nbpilot, summarize_webpage
 from .rag import search_and_answer
 
 
@@ -32,6 +32,10 @@ def run(args_line, query=None):
         parents=[parent_parser])
     search_parser.add_argument("--search_api", default="ms", required=False, help="search api to use")
 
+    search_parser = subparsers.add_parser("summarize", help="summarize the content of a web page or a file",
+        parents=[parent_parser])
+    search_parser.add_argument("--url", required=False, help="the url of a web page")
+
     search_parser = subparsers.add_parser("interact", help="run in interactive mode",
         parents=[parent_parser])
 
@@ -55,6 +59,8 @@ def run(args_line, query=None):
             main_parser.print_help()
             return
         search_and_answer([], query, provider=args.provider, model=args.model, debug=args.debug)
+    elif args.sub_command == "summarize":
+        summarize_webpage(args.url, provider=args.provider, model=args.model, debug=args.debug)
     elif args.sub_command == "interact":
         interacter = Inpteracter(args.provider, args.model)
         return interacter.interact()

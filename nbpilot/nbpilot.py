@@ -7,6 +7,7 @@ import ipynbname
 import nbformat
 
 from .llm import get_response
+from .tools import fetch_webpage_content
 
 
 system_prompt = f"""
@@ -138,3 +139,15 @@ def call_nbpilot(query, cell_id, provider="ollama", model=None, history_turns=0,
     if system_msg:
         history.append(system_msg)
     history.append({"role": "assistant", "content": assistant_content})
+
+
+def summarize_webpage(url, lang="Chinese", words=200, provider="ollama", model=None, debug=False):
+    content = fetch_webpage_content(url)
+    prompt = (f"Write a concise summary of the following content using {lang}."
+    f"Write with no more than {words} words. \nContent:{content}")
+
+    for chunk in get_response(prompt, provider=provider, model=model, stream=True, debug=debug):
+        if not chunk.choices:
+            continue
+        chunk_content = chunk.choices[0].delta.content
+        print(chunk_content or "", end="")
