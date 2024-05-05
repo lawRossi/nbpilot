@@ -41,7 +41,28 @@ def get_search_results(query, engine="ms", max_tokens=None):
     return search_results
 
 
-def fetch_webpage_content(url, timeout=10):
+def fetch_webpage_content(url, timeout=20):
     url = "https://r.jina.ai/" + url
-    response = requests.get(url, timeout=timeout)
-    return response.text
+    try:
+        response = requests.get(url, timeout=timeout)
+        return parse_content(response.text)
+    except:
+        return None
+
+
+def parse_content(content):
+    TITLE = "Title:"
+    SOURCE = "URL Source:"
+    CONTENT_START = "Markdown Content:"
+    lines = content.strip().split("\n")
+    title = None
+    source = None
+    content = None
+    for i, line in enumerate(lines):
+        if line.startswith(TITLE):
+            title = lines[0][len(TITLE):].strip()
+        if line.startswith(SOURCE):
+            source = lines[2][len(SOURCE):].strip()
+        if line.startswith(CONTENT_START):
+            content = "\n".join(lines[i+1:]).strip()
+    return {"title": title, "source": source, "content": content}

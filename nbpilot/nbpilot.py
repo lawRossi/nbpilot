@@ -143,6 +143,10 @@ def call_nbpilot(query, cell_id, provider="ollama", model=None, history_turns=0,
 
 def summarize_webpage(url, lang="Chinese", words=200, provider="ollama", model=None, debug=False):
     content = fetch_webpage_content(url)
+    if not content:
+        print("fail to fetch web page content")
+        return
+    content = content["content"]
     prompt = (f"Write a concise summary of the following content using {lang}."
     f"Write with no more than {words} words. \nContent:{content}")
 

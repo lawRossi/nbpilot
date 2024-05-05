@@ -2,10 +2,15 @@ import re
 import time
 
 from IPython.display import clear_output, display, Markdown
+from langchain_core.documents.base import Document
+from langchain.embeddings.sentence_transformer import SentenceTransformerEmbeddings
+from langchain.text_splitter import MarkdownTextSplitter
+from langchain.vectorstores.chroma import Chroma
 from loguru import logger
 
+from .config import load_config
 from .llm import get_response
-from .tools import get_search_results
+from .tools import get_search_results, fetch_webpage_content
 
 
 def format_references(references):
@@ -41,7 +46,7 @@ question1
 question2
 question3
 
-(Note: other than code and specific names, your output must be written in the same language as the question.)
+(Note: other than specific keywords, your output must be written in the same language as the question.)
 """
 
 
@@ -171,3 +176,71 @@ def search_and_answer(history_questions, question, compress_context=False,
     md = format_result(result)
     clear_output()
     display(Markdown(md))
+
+
+INDEXES = {}
+DEFAULT_INDEX = "DEFAULT_INDEX"
+embedding = None
+
+
+def build_index_from_url(url, index_name=None):
+    content = fetch_webpage_content(url)
+    if content is None:
+        logger.error("fail to fetch web page content")
+        return
+    doc = Document(
+        page_content=content["content"], 
+        metadata={"title": content["title"], "source": content["source"]}
+    )
+    spliter = MarkdownTextSplitter(chunk_size=250, chunk_overlap=50)
+    docs = spliter.split_documents([doc])
+    global embedding
+    if embedding is None:
+        config = load_config()
+        model_path = config["rag"]["embedding"]["model_path"]
+        embedding = SentenceTransformerEmbeddings(model_name=model_path)
+    if index_name is None:
+        index_name = DEFAULT_INDEX
+    if index_name in INDEXES:
+        del(INDEXES[index_name])
+    vector_store = Chroma.from_documents(
+        docs,
+        embedding,
+        collection_name=index_name,
+        collection_metadata={"hnsw:space": "cosine"}
+    )
+    INDEXES[index_name] = vector_store
+    logger.info("building index done")
+
+
+def get_references_from_index(query, index_name=None):
+    if index_name is None:
+        index_name = DEFAULT_INDEX
+    if index_name not in INDEXES:
+        logger.error(f"index {index_name} does not exist")
+        return ""
+    vector_store = INDEXES[index_name]
+    retriver = vector_store.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.3, "k": 5})
+    refs_text = ""
+    for i, reference in enumerate(retriver.get_relevant_documents(query)):
+        content = reference.page_content.replace("\n", "  ").strip()
+        refs_text += f"[citation:{i+1}]{content}\n\n"
+
+    return refs_text.strip()
+
+
+def retrieve_and_answer(question, index_name=None, provider=None, model=None, debug=False):
+    refs_text = get_references_from_index(question, index_name)
+    if not refs_text:
+        logger.warning("no references fetched.")
+    history_questions = ""
+    prompt = answer_prompt.replace("{{history_questions}}", history_questions)
+    prompt = prompt.replace("{{question}}", question)
+    prompt = prompt.replace("{{referenes}}", refs_text)
+    logger.info("extracting answer...")
+    response = get_response(prompt, provider=provider, model=model, stream=True, debug=debug)
+    for chunk in response:
+        if not chunk.choices:
+            continue
+        chunk_content = chunk.choices[0].delta.content
+        print(chunk_content or "", end="")
