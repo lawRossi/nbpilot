@@ -6,7 +6,7 @@ import shlex
 
 from .interactive import Inpteracter
 from .nbpilot import call_nbpilot, summarize_webpage
-from .rag import search_and_answer
+from .rag import build_index_from_url, retrieve_and_answer, search_and_answer
 
 
 RUNNING_CELL_ID = None
@@ -32,11 +32,20 @@ def run(args_line, query=None):
         parents=[parent_parser])
     search_parser.add_argument("--search_api", default="ms", required=False, help="search api to use")
 
-    search_parser = subparsers.add_parser("summarize", help="summarize the content of a web page or a file",
+    read_parser = subparsers.add_parser("read", help="read a web page or file to create index",
         parents=[parent_parser])
-    search_parser.add_argument("--url", required=False, help="the url of a web page")
+    read_parser.add_argument("--url", required=False, help="the url of a web page")
+    read_parser.add_argument("--index-name", "-i", required=False, help="the name of the index")
 
-    search_parser = subparsers.add_parser("interact", help="run in interactive mode",
+    ask_parser = subparsers.add_parser("ask", help="read a web page or file to create index",
+        parents=[parent_parser])
+    ask_parser.add_argument("--index_name", "-i", required=False, help="the name of the index")
+
+    summarize_parser = subparsers.add_parser("summarize", help="summarize the content of a web page or a file",
+        parents=[parent_parser])
+    summarize_parser.add_argument("--url", required=False, help="the url of a web page")
+
+    interact_parser = subparsers.add_parser("interact", help="run in interactive mode",
         parents=[parent_parser])
 
     try:
@@ -59,6 +68,13 @@ def run(args_line, query=None):
             main_parser.print_help()
             return
         search_and_answer([], query, provider=args.provider, model=args.model, debug=args.debug)
+    elif args.sub_command == "read":
+        build_index_from_url(args.url, args.index_name)
+    elif args.sub_command == "ask":
+        if query is None:
+            main_parser.print_help()
+            return
+        retrieve_and_answer(query, args.index_name, args.provider, args.model, ars.debug)
     elif args.sub_command == "summarize":
         summarize_webpage(args.url, provider=args.provider, model=args.model, debug=args.debug)
     elif args.sub_command == "interact":

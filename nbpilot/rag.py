@@ -7,6 +7,7 @@ from langchain.embeddings.sentence_transformer import SentenceTransformerEmbeddi
 from langchain.text_splitter import MarkdownTextSplitter
 from langchain.vectorstores.chroma import Chroma
 from loguru import logger
+import torch
 
 from .config import load_config
 from .llm import get_response
@@ -192,13 +193,15 @@ def build_index_from_url(url, index_name=None):
         page_content=content["content"], 
         metadata={"title": content["title"], "source": content["source"]}
     )
-    spliter = MarkdownTextSplitter(chunk_size=250, chunk_overlap=50)
+    spliter = MarkdownTextSplitter(chunk_size=300, chunk_overlap=50)
     docs = spliter.split_documents([doc])
     global embedding
     if embedding is None:
         config = load_config()
         model_path = config["rag"]["embedding"]["model_path"]
-        embedding = SentenceTransformerEmbeddings(model_name=model_path)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model_kwargs = {'device': device}
+        embedding = SentenceTransformerEmbeddings(model_name=model_path, model_kwargs=model_kwargs)
     if index_name is None:
         index_name = DEFAULT_INDEX
     if index_name in INDEXES:
