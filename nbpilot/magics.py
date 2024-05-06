@@ -18,7 +18,7 @@ def run(args_line, query=None):
         default="zhipu", dest="provider", help="llm provider")
     parent_parser.add_argument('--llm_model', "-m", required=False,
         dest="model", help="model name")
-    parent_parser.add_argument('--debug', "-d", default=False, type=bool,
+    parent_parser.add_argument('--debug', "-d", action="store_true",
         dest="debug", help="run with debug mode")
     parent_parser.add_argument("--history_turns", "-H", required=False, help="history turns to include", type=int, default=0)
     parent_parser.add_argument("--cells", "-c", required=False, help="cells to include in the context")
@@ -74,7 +74,7 @@ def run(args_line, query=None):
         if query is None:
             main_parser.print_help()
             return
-        retrieve_and_answer(query, args.index_name, args.provider, args.model, ars.debug)
+        retrieve_and_answer(query, args.index_name, args.provider, args.model, args.debug)
     elif args.sub_command == "summarize":
         summarize_webpage(args.url, provider=args.provider, model=args.model, debug=args.debug)
     elif args.sub_command == "interact":

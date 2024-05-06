@@ -205,7 +205,7 @@ def build_index_from_url(url, index_name=None):
     if index_name is None:
         index_name = DEFAULT_INDEX
     if index_name in INDEXES:
-        del(INDEXES[index_name])
+        INDEXES[index_name].delete_collection()
     vector_store = Chroma.from_documents(
         docs,
         embedding,
