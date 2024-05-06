@@ -44,6 +44,8 @@ def run(args_line, query=None):
     summarize_parser = subparsers.add_parser("summarize", help="summarize the content of a web page or a file",
         parents=[parent_parser])
     summarize_parser.add_argument("--url", required=False, help="the url of a web page")
+    summarize_parser.add_argument("--words", required=False, help="number of words", type=int, default=200)
+    summarize_parser.add_argument("--lang", "-l", required=False, help="language", default="Chinese")
 
     interact_parser = subparsers.add_parser("interact", help="run in interactive mode",
         parents=[parent_parser])
@@ -76,7 +78,7 @@ def run(args_line, query=None):
             return
         retrieve_and_answer(query, args.index_name, args.provider, args.model, args.debug)
     elif args.sub_command == "summarize":
-        summarize_webpage(args.url, provider=args.provider, model=args.model, debug=args.debug)
+        summarize_webpage(args.url, args.lang, args.words, args.provider, args.model, args.debug)
     elif args.sub_command == "interact":
         interacter = Inpteracter(args.provider, args.model)
         return interacter.interact()
