@@ -6,3 +6,4 @@ markdown
 tavily-python
 nbformat>=5.9.2
 ipynbname
+tencentcloud-sdk-python
