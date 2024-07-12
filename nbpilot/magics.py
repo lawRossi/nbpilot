@@ -12,7 +12,7 @@ from .rag import build_index_from_url, retrieve_and_answer, search_and_answer
 RUNNING_CELL_ID = None
 
 
-def run(args_line, query=None):
+def run(args_line=None, query=None):
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument("--llm_provider", "-p",
         default="zhipu", dest="provider", help="llm provider")
@@ -51,7 +51,10 @@ def run(args_line, query=None):
         parents=[parent_parser])
 
     try:
-        args = main_parser.parse_args(shlex.split(args_line) if args_line else [])
+        if args_line is not None:
+            args = main_parser.parse_args(shlex.split(args_line) if args_line else [])
+        else:
+            args = main_parser.parse_args()
         if query is None:
             query = args.query
     except:
@@ -96,4 +99,7 @@ def pre_run_cell(info):
     RUNNING_CELL_ID = info.cell_id
 
 
-get_ipython().events.register('pre_run_cell', pre_run_cell)
+try:
+    get_ipython().events.register('pre_run_cell', pre_run_cell)
+except:
+    pass

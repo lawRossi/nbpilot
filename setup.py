@@ -13,5 +13,10 @@ setuptools.setup(
         "Framework :: Jupyter",
     ],
     include_package_data=True,
-    zip_safe=False
+    zip_safe=False,
+    entry_points = {  
+        'console_scripts': [  
+             'nbpilot = nbpilot.__main__:main'  
+         ]  
+    }
 )
